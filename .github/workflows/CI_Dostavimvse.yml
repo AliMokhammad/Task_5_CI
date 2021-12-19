@@ -1,0 +1,48 @@
+
+name: Task_5_CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  db:
+    runs-on: ubuntu-18.04
+    env:
+      DB_DATABASE: dostavim
+      DB_USER: root
+      DB_PASSWORD: root
+
+
+    steps:
+      - name: checkout_master_branch
+        uses: actions/checkout@v2
+       
+      - name: Set up MySQL
+        run: |
+         sudo /etc/init.d/mysql start
+         mysql -e 'CREATE DATABASE ${{ env.DB_DATABASE }};' -u${{ env.DB_USER }} -p${{ env.DB_PASSWORD }}
+         mysql ${{ env.DB_DATABASE }} < /home/runner/work/Task5/Task5/CREATE.sql -u${{ env.DB_USER }} -p${{ env.DB_PASSWORD }}
+         mysql -e 'USE ${{ env.DB_DATABASE }}; SHOW TABLES;' -u${{ env.DB_USER }} -p${{ env.DB_PASSWORD }}
+  build:
+    needs: db
+    runs-on: ubuntu-18.04
+    steps:
+      - name: checkout_master_branch
+        uses: actions/checkout@v2
+
+      - name: setup_jdk
+        uses: actions/setup-java@v1
+        with:
+            java-version: 1.8
+
+      - name: build_java_with_maven
+        run: mvn package -P init-base
+        
+      - name: upload_artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: jar-file
+          path: target/*.jar
